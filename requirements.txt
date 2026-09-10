@@ -1,0 +1,25 @@
+# ============================================================
+# SentinelGraph — AI-Based Network Attack Forecasting
+# Requirements (CPU-only build)
+# ============================================================
+
+# Core ML — TGN lives in torch_geometric.nn.models.TGNMemory
+torch>=2.3.0
+torch-geometric>=2.5.0
+
+# Data handling
+pandas>=2.2.0
+numpy>=1.26.0
+networkx>=3.2
+
+# Baselines + Explainability
+scikit-learn>=1.4.0
+shap>=0.45.0
+
+# Demo app
+streamlit>=1.35.0
+plotly>=5.20.0
+
+# Utilities
+tqdm
+requests
