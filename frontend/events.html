@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Events | SentinelGraph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">Overview</a>
+                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
+                <a href="forecast.html" class="nav-item">Threat Forecast</a>
+                <a href="events.html" class="nav-item">Security Events</a>
+                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
+                <a href="settings.html" class="nav-item">Settings</a>
+                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="top-header">
+                <div class="header-title">SECURITY EVENTS MONITORING</div>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="glass-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3>EVENT LOGS</h3>
+                        <select id="severityFilter" class="form-control" style="width: auto; padding: 8px;">
+                            <option value="ALL">ALL SEVERITIES</option>
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="HIGH">HIGH</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>TIMESTAMP</th>
+                                    <th>ATTACK TYPE</th>
+                                    <th>SOURCE</th>
+                                    <th>DESTINATION</th>
+                                    <th>RISK</th>
+                                    <th>SEVERITY</th>
+                                    <th>MITRE TACTIC</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="eventsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.getElementById('severityFilter').addEventListener('change', function(e) {
+            const filter = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#eventsTableBody tr');
+            rows.forEach(row => {
+                const sevCell = row.querySelector('.severity-badge');
+                if (!sevCell) return;
+                const sevText = sevCell.textContent.toLowerCase();
+                if (filter === 'all' || sevText === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

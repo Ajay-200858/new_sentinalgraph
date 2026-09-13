@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | SentinelGraph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">Overview</a>
+                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
+                <a href="forecast.html" class="nav-item">Threat Forecast</a>
+                <a href="events.html" class="nav-item">Security Events</a>
+                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
+                <a href="settings.html" class="nav-item">Settings</a>
+                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="top-header">
+                <div class="header-title">SYSTEM SETTINGS & STATUS</div>
+            </div>
+
+            <div class="content-wrapper" style="max-width: 800px;">
+                <div class="glass-panel mb-4">
+                    <h3>PLATFORM STATUS</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; font-family: var(--font-mono);">
+                        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                            <span class="text-muted">FastAPI Backend</span><br>
+                            <div class="status-badge mt-2"><div class="status-dot"></div><span id="statusApi">CHECKING...</span></div>
+                        </div>
+                        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                            <span class="text-muted">PostgreSQL Database</span><br>
+                            <div class="status-badge mt-2"><div class="status-dot"></div><span id="statusDb">CHECKING...</span></div>
+                        </div>
+                        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                            <span class="text-muted">TGN Inference Engine</span><br>
+                            <div class="status-badge mt-2"><div class="status-dot"></div><span id="statusModel">CHECKING...</span></div>
+                        </div>
+                        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                            <span class="text-muted">Notification System</span><br>
+                            <div class="status-badge mt-2"><div class="status-dot online"></div><span id="statusNotifications">ENABLED</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel mb-4">
+                    <h3>NOTIFICATION SYSTEM (CASPIAN ALERTING)</h3>
+                    <div style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.9rem; line-height: 1.8;">
+                        <p><strong>Status:</strong> <span class="status-dot online" style="display:inline-block; vertical-align:middle; margin-right:6px;"></span><span style="color: #00ff88; font-weight: 600;">ACTIVE &amp; ENABLED</span></p>
+                        <p><strong>Configured Channels:</strong> Discord (#WareFlow AI) &bull; Telegram (@wareflow_bojji_bot)</p>
+                        <p><strong>Trigger Condition:</strong> Non-benign Threat with Risk Score &ge; 60 (High &amp; Critical)</p>
+                        <p><strong>Duplicate Suppression:</strong> 15 minutes window per attack type</p>
+                        <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+                            <button id="btnTestAlert" class="cyber-button primary" style="padding: 8px 18px; font-size: 0.85rem; cursor: pointer;">SEND TEST ALERT</button>
+                            <span id="testAlertResult" style="font-size: 0.85rem; font-family: var(--font-mono); color: var(--text-muted);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <h3>DATASET CONFIGURATION</h3>
+                    <div style="margin-top: 16px; font-family: var(--font-mono); font-size: 0.9rem;">
+                        <p><strong>Primary Training Data:</strong> CIC-IDS2017</p>
+                        <p><strong>Input Dimension:</strong> 78 Features</p>
+                        <p><strong>Feature Scaling:</strong> StandardScaler</p>
+                        <p><strong>Graph Node Mapping:</strong> Source IP / Destination IP</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel mt-4 text-center">
+                    <p class="mb-2">SentinelGraph SIH Prototype v1.0.0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

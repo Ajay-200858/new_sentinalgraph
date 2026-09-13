@@ -29,6 +29,7 @@ from config import (
     COL_PROTOCOL, COL_LABEL,
     EDGE_FEATURE_COLS,
     RAW_LABEL_TO_CATEGORY,
+    CLASS_TO_IDX,
     CATEGORY_TO_ID,
     TARGET_CSV_FILES,
     S3_BUCKET, S3_PREFIX,
@@ -320,25 +321,36 @@ def load_and_clean(
             df[col] = df[col].fillna(median_val if not np.isnan(median_val) else 0)
 
     # ── 4. Normalize labels ──────────────────────────────────
+    label_col_found = None
     if COL_LABEL in df.columns:
-        df[COL_LABEL] = df[COL_LABEL].str.strip()
-        df["label_category"] = df[COL_LABEL].map(RAW_LABEL_TO_CATEGORY)
+        label_col_found = COL_LABEL
+    elif "Label" in df.columns:
+        label_col_found = "Label"
+
+    if label_col_found is not None:
+        df[label_col_found] = df[label_col_found].astype(str).str.strip()
+        df["label_category"] = df[label_col_found].map(RAW_LABEL_TO_CATEGORY)
 
         # Handle any unmapped labels
         unmapped = df["label_category"].isna()
         if unmapped.any():
-            unmapped_labels = df.loc[unmapped, COL_LABEL].unique()
-            logger.warning(f"Unmapped labels found (mapped to 'Benign'): {unmapped_labels}")
-            df.loc[unmapped, "label_category"] = "Benign"
+            unmapped_labels = df.loc[unmapped, label_col_found].unique()
+            logger.warning(f"Unmapped labels found (mapped to 'BENIGN'): {unmapped_labels}")
+            df.loc[unmapped, "label_category"] = "BENIGN"
 
-        df["label_id"] = df["label_category"].map(CATEGORY_TO_ID)
+        df["label_id"] = df["label_category"].map(CLASS_TO_IDX).fillna(0).astype(int)
     else:
-        logger.warning(f"Column '{COL_LABEL}' not found - defaulting all to Benign")
-        df[COL_LABEL] = "Benign"
-        df["label_category"] = "Benign"
+        logger.warning(f"Label column not found - defaulting all to BENIGN")
+        df[COL_LABEL] = "BENIGN"
+        df["label_category"] = "BENIGN"
         df["label_id"] = 0
 
     # ── 5. Ensure IP columns exist ───────────────────────────
+    if COL_SRC_IP not in df.columns and "Src_IP_dec" in df.columns:
+        df[COL_SRC_IP] = df["Src_IP_dec"].astype(str)
+    if COL_DST_IP not in df.columns and "Dst_IP_dec" in df.columns:
+        df[COL_DST_IP] = df["Dst_IP_dec"].astype(str)
+
     for col in [COL_SRC_IP, COL_DST_IP]:
         if col not in df.columns:
             logger.warning(f"Column '{col}' not found - generating placeholder IPs")
@@ -418,7 +430,7 @@ def sample_balanced(
 # ═══════════════════════════════════════════════════════════════
 
 def load_dataset(
-    filename: str = TARGET_CSV_FILES[0],
+    filename: str = "data/sentinelgraph_real_temporal_10k.csv",
     max_rows: Optional[int] = None,
     sample_size: Optional[int] = None,
 ) -> pd.DataFrame:
@@ -439,7 +451,13 @@ def load_dataset(
     pd.DataFrame
         Ready-to-use DataFrame.
     """
-    filepath = download_from_s3(filename)
+    filepath = Path(filename)
+    if not filepath.is_absolute():
+        project_root = Path(__file__).parent.parent
+        filepath = project_root / filename
+
+    if not filepath.exists():
+        filepath = download_from_s3(filename)
     df = load_and_clean(filepath, max_rows=max_rows)
 
     if sample_size:
@@ -456,8 +474,9 @@ if __name__ == "__main__":
 
     df = load_dataset(max_rows=10_000)
     print(f"\nDataset shape: {df.shape}")
-    print(f"Time range: {df[COL_TIMESTAMP].min()} → {df[COL_TIMESTAMP].max()}")
+    print(f"Time range: {df[COL_TIMESTAMP].min()} -> {df[COL_TIMESTAMP].max()}")
     print(f"\nLabel distribution:")
     print(get_label_distribution(df).to_string(index=False))
     print(f"\nFirst 3 rows:")
-    print(df[[COL_TIMESTAMP, COL_SRC_IP, COL_DST_IP, COL_DST_PORT, COL_LABEL, "label_category"]].head(3))
+    cols_to_print = [c for c in [COL_TIMESTAMP, COL_SRC_IP, COL_DST_IP, COL_DST_PORT, COL_LABEL, "label_category", "label_id"] if c in df.columns]
+    print(df[cols_to_print].head(3))

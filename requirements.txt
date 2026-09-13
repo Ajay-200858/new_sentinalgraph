@@ -1,25 +1,43 @@
 # ============================================================
 # SentinelGraph — AI-Based Network Attack Forecasting
-# Requirements (CPU-only build)
+# Python 3.13 | CPU-only | PostgreSQL via psycopg2
+# ============================================================
+# Audited against every import in:
+#   backend/main.py, backend/database.py, backend/model_service.py,
+#   backend/caspian_service.py, backend/schemas.py, backend/models.py,
+#   config.py
 # ============================================================
 
-# Core ML — TGN lives in torch_geometric.nn.models.TGNMemory
+# -- API layer ------------------------------------------------
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.10    # FastAPI UploadFile / File(...) support
+starlette>=0.40.0           # FastAPI dependency
+
+# -- Database -------------------------------------------------
+sqlalchemy>=2.0
+python-dotenv>=1.0          # load_dotenv() called in database.py
+psycopg2-binary>=2.9        # postgresql:// dialect (no +driver specified)
+
+# -- ML / TGN -------------------------------------------------
 torch>=2.3.0
 torch-geometric>=2.5.0
-
-# Data handling
 pandas>=2.2.0
 numpy>=1.26.0
 networkx>=3.2
+scikit-learn>=1.4.0         # StandardScaler, LabelEncoder, RF, LR
 
-# Baselines + Explainability
-scikit-learn>=1.4.0
+# -- Explainability / demo ------------------------------------
 shap>=0.45.0
-
-# Demo app
 streamlit>=1.35.0
 plotly>=5.20.0
 
-# Utilities
+# -- Utilities ------------------------------------------------
 tqdm
 requests
+
+# -- Caspian alerting (optional) ------------------------------
+# App operates normally when credentials are not configured.
+caspian-sdk==1.0.2
+httpx>=0.27,<1              # caspian-sdk HttpGatewayClient dependency
+pydantic>=2.7,<3            # caspian-sdk + FastAPI response models

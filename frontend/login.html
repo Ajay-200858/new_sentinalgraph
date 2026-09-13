@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | SentinelGraph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    
+    <div class="login-container">
+        <div class="login-card glass-panel">
+            <h1 style="font-size: 1.8rem; margin-bottom: 8px;">SENTINEL<span class="highlight">GRAPH</span></h1>
+            <h2 style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 32px;">SECURE ACCESS PORTAL</h2>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" class="form-control" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+                
+                <p style="font-size: 0.8rem; margin: 16px 0; font-family: var(--font-mono);">Authorized Security Personnel Only</p>
+                
+                <button type="submit" class="cyber-button primary" style="width: 100%;">LOGIN</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

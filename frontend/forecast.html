@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Forecast | SentinelGraph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">Overview</a>
+                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
+                <a href="forecast.html" class="nav-item">Threat Forecast</a>
+                <a href="events.html" class="nav-item">Security Events</a>
+                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
+                <a href="settings.html" class="nav-item">Settings</a>
+                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="top-header">
+                <div class="header-title">TEMPORAL THREAT FORECAST</div>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="kpi-grid">
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">CURRENT RISK</div>
+                        <div class="kpi-value"><span id="valRisk" class="warning-text">0</span><span class="kpi-sub">/100</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">TOP PROJECTED THREAT</div>
+                        <div class="kpi-value"><span id="topThreatVal" class="danger-text">--</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">MODEL CONFIDENCE</div>
+                        <div class="kpi-value"><span id="modelConfidenceVal">--</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">AFFECTED NODES</div>
+                        <div class="kpi-value"><span id="affectedNodesVal">--</span></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel mt-4">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3>TEMPORAL RISK PROJECTION</h3>
+                        <span class="severity-badge severity-critical">FORECAST ACTIVE</span>
+                    </div>
+                    <p style="font-size: 0.9rem;">Using the Temporal Graph Network (TGN), SentinelGraph continuously maps the evolving structure of network traffic to project future risk dynamics.</p>
+                    <div class="chart-wrapper mt-4">
+                        <canvas id="riskTimelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

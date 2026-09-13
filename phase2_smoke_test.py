@@ -19,6 +19,9 @@ from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score
 )
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if "src" in __file__ else os.path.dirname(os.path.abspath(__file__)))
+from config import RAW_LABEL_TO_CATEGORY
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if hasattr(sys.stderr, 'reconfigure'):
@@ -29,6 +32,8 @@ print("=" * 60)
 
 # Resolve dataset path (handle root or src/ execution)
 possible_paths = [
+    "data/sentinelgraph_real_temporal_10k.csv",
+    "../data/sentinelgraph_real_temporal_10k.csv",
     "data/cic_ids2017_tgn_smoke_test_10k_balanced__1_.csv",
     "../data/cic_ids2017_tgn_smoke_test_10k_balanced__1_.csv",
     "data/cic_ids2017_tgn_smoke_test_10k_balanced (1).csv",
@@ -46,7 +51,7 @@ for p in possible_paths:
 if csv_path is None:
     # Try finding in absolute path
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if "src" in __file__ else os.path.dirname(os.path.abspath(__file__))
-    potential = os.path.join(repo_root, "data", "cic_ids2017_tgn_smoke_test_10k_balanced__1_.csv")
+    potential = os.path.join(repo_root, "data", "sentinelgraph_real_temporal_10k.csv")
     if os.path.exists(potential):
         csv_path = potential
     else:
@@ -85,8 +90,11 @@ else:
 print(f"✅ Cleaned shape: {df.shape}")
 
 # Separate features and label
-X = df.drop('Label', axis=1).values.astype(np.float32)
-y = df['Label'].values.copy()
+cols_to_drop = ['Label']
+if 'Timestamp' in df.columns: cols_to_drop.append('Timestamp')
+if 'Attack_Label' in df.columns: cols_to_drop.append('Attack_Label')
+X = df.drop(cols_to_drop, axis=1).values.astype(np.float32)
+y = df['Label'].map(RAW_LABEL_TO_CATEGORY).fillna('BENIGN').values.copy()
 
 print(f"   Features shape: {X.shape}")
 print(f"   Label distribution:")
@@ -102,11 +110,12 @@ print(f"\n🔧 Preprocessing...")
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-le = LabelEncoder()
-y_encoded = le.fit_transform(y)
+explicit_mapping = {"BENIGN": 0, "DoS": 1, "DDoS": 2, "PortScan": 3, "Infiltration": 4}
+y_encoded = np.array([explicit_mapping[lbl] for lbl in y])
+classes_ = ["BENIGN", "DoS", "DDoS", "PortScan", "Infiltration"]
 
 print(f"   Scaler: mean={X_scaled.mean():.4f}, std={X_scaled.std():.4f}")
-print(f"   Labels encoded: {dict(zip(le.classes_, le.transform(le.classes_)))}")
+print(f"   Labels encoded: {explicit_mapping}")
 
 # Train/test split (80% train / 20% test stratified)
 X_train, X_test, y_train, y_test = train_test_split(
@@ -196,7 +205,7 @@ print(f"   Edge features shape: {edge_attr.shape}")
 
 # Simple TGN Model
 class SimpleTGN(nn.Module):
-    def __init__(self, num_nodes, input_dim, hidden_dim=64, num_classes=4):
+    def __init__(self, num_nodes, input_dim, hidden_dim=64, num_classes=5):
         super().__init__()
         self.node_embedding = nn.Embedding(num_nodes, hidden_dim)
         self.fc1 = nn.Linear(input_dim + hidden_dim, hidden_dim)
@@ -210,7 +219,7 @@ class SimpleTGN(nn.Module):
         logits = self.fc2(h)
         return logits
 
-num_classes = len(le.classes_)
+num_classes = len(classes_)
 model = SimpleTGN(num_nodes, edge_attr.shape[1], hidden_dim=64, num_classes=num_classes).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 loss_fn = nn.CrossEntropyLoss()

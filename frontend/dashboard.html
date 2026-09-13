@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SentinelGraph</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <canvas id="bgCanvas"></canvas>
+    
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
+            <div class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">Overview</a>
+                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
+                <a href="forecast.html" class="nav-item">Threat Forecast</a>
+                <a href="events.html" class="nav-item">Security Events</a>
+                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
+                <a href="settings.html" class="nav-item">Settings</a>
+                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <div class="top-header">
+                <div class="header-title">AI NETWORK SECURITY PLATFORM</div>
+                <div class="header-status">
+                    <div class="status-badge"><div class="status-dot"></div><span id="statusApi">CHECKING...</span></div>
+                    <div class="status-badge"><div class="status-dot"></div><span id="statusDb">CHECKING...</span></div>
+                    <div class="status-badge"><div class="status-dot"></div><span id="statusModel">CHECKING...</span></div>
+                    <div class="status-badge"><div class="status-dot online"></div><span id="statusNotifications">ALERTS: ACTIVE</span></div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                <!-- KPI CARDS -->
+                <div class="kpi-grid">
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">TOTAL FLOWS</div>
+                        <div class="kpi-value"><span id="valFlows">0</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">ATTACKS DETECTED</div>
+                        <div class="kpi-value"><span id="valAttacks" class="warning-text">0</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">HIGH-RISK EVENTS</div>
+                        <div class="kpi-value"><span id="valHighRisk" class="danger-text">0</span></div>
+                    </div>
+                    <div class="glass-panel kpi-card">
+                        <div class="kpi-title">CURRENT RISK</div>
+                        <div class="kpi-value"><span id="valRisk" class="danger-text">0</span><span class="kpi-sub">/100</span></div>
+                    </div>
+                </div>
+
+                <!-- CHARTS -->
+                <div class="charts-grid">
+                    <div class="glass-panel">
+                        <h3>TEMPORAL RISK PROJECTION</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="riskTimelineChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel">
+                        <h3>ATTACK DISTRIBUTION</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="attackDistChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EVENTS & PREDICTIONS -->
+                <div class="charts-grid">
+                    <div class="glass-panel" style="grid-column: 1 / -1;">
+                        <h3>LATEST SECURITY EVENT</h3>
+                        <div id="latestEventContainer" class="mt-2">
+                            <p>Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel mt-4">
+                    <h3>RECENT PREDICTIONS</h3>
+                    <div class="table-container mt-2">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>SOURCE</th>
+                                    <th>DESTINATION</th>
+                                    <th>MODEL</th>
+                                    <th>ATTACK</th>
+                                    <th>CONFIDENCE</th>
+                                    <th>RISK</th>
+                                    <th>SEVERITY</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predictionsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
