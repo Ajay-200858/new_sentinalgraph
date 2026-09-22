@@ -3,114 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | SentinelGraph</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>Dashboard - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <canvas id="bgCanvas"></canvas>
-    
-    <div class="app-container">
-        <!-- SIDEBAR -->
-        <div class="sidebar">
-            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
-            <div class="sidebar-nav">
-                <a href="dashboard.html" class="nav-item">Overview</a>
-                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
-                <a href="forecast.html" class="nav-item">Threat Forecast</a>
-                <a href="events.html" class="nav-item">Security Events</a>
-                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
-                <a href="settings.html" class="nav-item">Settings</a>
-                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
-            </div>
+    <div id="main-content">
+        
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <h3>No network data available yet.</h3>
+            <p>Upload a CSV or start a replay to begin analysis.</p>
+            <br>
+            <button class="btn-primary" onclick="window.location.href='replay.html'">Go to Replay Control</button>
         </div>
 
-        <!-- MAIN CONTENT -->
-        <div class="main-content">
-            <div class="top-header">
-                <div class="header-title">AI NETWORK SECURITY PLATFORM</div>
-                <div class="header-status">
-                    <div class="status-badge"><div class="status-dot"></div><span id="statusApi">CHECKING...</span></div>
-                    <div class="status-badge"><div class="status-dot"></div><span id="statusDb">CHECKING...</span></div>
-                    <div class="status-badge"><div class="status-dot"></div><span id="statusModel">CHECKING...</span></div>
-                    <div class="status-badge"><div class="status-dot online"></div><span id="statusNotifications">ALERTS: ACTIVE</span></div>
+        <div id="dashboard-content">
+            <div class="grid grid-cols-6" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div class="card">
+                    <div class="text-muted">Total Flows</div>
+                    <div class="kpi-value" id="kpi-total-flows">0</div>
+                </div>
+                <div class="card">
+                    <div class="text-muted">Predictions</div>
+                    <div class="kpi-value" id="kpi-predictions">0</div>
+                </div>
+                <div class="card">
+                    <div class="text-muted">Attacks Detected</div>
+                    <div class="kpi-value" id="kpi-attacks">0</div>
+                </div>
+                <div class="card">
+                    <div class="text-muted">High Risk Events</div>
+                    <div class="kpi-value" id="kpi-high-risk">0</div>
+                </div>
+                <div class="card">
+                    <div class="text-muted">Active Hosts</div>
+                    <div class="kpi-value" id="kpi-active-hosts">0</div>
+                </div>
+                <div class="card">
+                    <div class="text-muted">Current Risk</div>
+                    <div class="kpi-value" id="kpi-risk" style="color: var(--accent-red);">0</div>
                 </div>
             </div>
 
-            <div class="content-wrapper">
-                <!-- KPI CARDS -->
-                <div class="kpi-grid">
-                    <div class="glass-panel kpi-card">
-                        <div class="kpi-title">TOTAL FLOWS</div>
-                        <div class="kpi-value"><span id="valFlows">0</span></div>
-                    </div>
-                    <div class="glass-panel kpi-card">
-                        <div class="kpi-title">ATTACKS DETECTED</div>
-                        <div class="kpi-value"><span id="valAttacks" class="warning-text">0</span></div>
-                    </div>
-                    <div class="glass-panel kpi-card">
-                        <div class="kpi-title">HIGH-RISK EVENTS</div>
-                        <div class="kpi-value"><span id="valHighRisk" class="danger-text">0</span></div>
-                    </div>
-                    <div class="glass-panel kpi-card">
-                        <div class="kpi-title">CURRENT RISK</div>
-                        <div class="kpi-value"><span id="valRisk" class="danger-text">0</span><span class="kpi-sub">/100</span></div>
-                    </div>
+            <div class="grid grid-cols-2">
+                <div class="card">
+                    <h3>Attack Distribution</h3>
+                    <canvas id="attackChart" style="max-height: 300px;"></canvas>
                 </div>
+                <div class="card">
+                    <h3>Risk Projection</h3>
+                    <canvas id="riskChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
 
-                <!-- CHARTS -->
-                <div class="charts-grid">
-                    <div class="glass-panel">
-                        <h3>TEMPORAL RISK PROJECTION</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="riskTimelineChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="glass-panel">
-                        <h3>ATTACK DISTRIBUTION</h3>
-                        <div class="chart-wrapper">
-                            <canvas id="attackDistChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- EVENTS & PREDICTIONS -->
-                <div class="charts-grid">
-                    <div class="glass-panel" style="grid-column: 1 / -1;">
-                        <h3>LATEST SECURITY EVENT</h3>
-                        <div id="latestEventContainer" class="mt-2">
-                            <p>Loading...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="glass-panel mt-4">
-                    <h3>RECENT PREDICTIONS</h3>
-                    <div class="table-container mt-2">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>TIME</th>
-                                    <th>SOURCE</th>
-                                    <th>DESTINATION</th>
-                                    <th>MODEL</th>
-                                    <th>ATTACK</th>
-                                    <th>CONFIDENCE</th>
-                                    <th>RISK</th>
-                                    <th>SEVERITY</th>
-                                </tr>
-                            </thead>
-                            <tbody id="predictionsTableBody">
-                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="card">
+                <h3>Recent Security Events</h3>
+                <table id="recent-events-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Attack Type</th>
+                            <th>Risk</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/dashboard.js"></script>
 </body>
 </html>

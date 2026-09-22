@@ -1,0 +1,12 @@
+/* responsive.css */
+@media (max-width: 1024px) {
+    .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .layout-container { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); }
+    .grid-cols-2 { grid-template-columns: 1fr; }
+    .topbar { flex-direction: column; height: auto; padding: 10px; }
+    .status-indicator { margin-bottom: 5px; display: inline-block; }
+}

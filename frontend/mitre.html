@@ -3,85 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MITRE ATT&CK | SentinelGraph</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>MITRE ATT&CK - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
 </head>
 <body>
-    <canvas id="bgCanvas"></canvas>
-    
-    <div class="app-container">
-        <div class="sidebar">
-            <div class="sidebar-brand">SENTINEL<span>GRAPH</span></div>
-            <div class="sidebar-nav">
-                <a href="dashboard.html" class="nav-item">Overview</a>
-                <a href="analyze.html" class="nav-item">Analyze Traffic</a>
-                <a href="forecast.html" class="nav-item">Threat Forecast</a>
-                <a href="events.html" class="nav-item">Security Events</a>
-                <a href="mitre.html" class="nav-item">MITRE ATT&CK</a>
-                <a href="settings.html" class="nav-item">Settings</a>
-                <a href="#" id="logoutBtn" class="nav-item" style="margin-top: auto;">Logout</a>
-            </div>
-        </div>
-
-        <div class="main-content">
-            <div class="top-header">
-                <div class="header-title">MITRE ATT&CK FRAMEWORK MAPPING</div>
-            </div>
-
-            <div class="content-wrapper">
-                <div class="glass-panel text-center mb-4">
-                    <p style="max-width: 800px; margin: 0 auto;">
-                        SentinelGraph correlates identified attacks to their corresponding stages in the MITRE ATT&CK Enterprise Matrix. Highlighted stages indicate active threats detected in the temporal network graph.
-                    </p>
-                </div>
-
-                <div class="mitre-grid" id="mitreGrid">
-                    <div class="mitre-tactic" data-tactic="Reconnaissance">RECONNAISSANCE</div>
-                    <div class="mitre-tactic" data-tactic="Initial Access">INITIAL ACCESS</div>
-                    <div class="mitre-tactic" data-tactic="Execution">EXECUTION</div>
-                    <div class="mitre-tactic" data-tactic="Persistence">PERSISTENCE</div>
-                    <div class="mitre-tactic" data-tactic="Privilege Escalation">PRIVILEGE ESCALATION</div>
-                    <div class="mitre-tactic" data-tactic="Defense Evasion">DEFENSE EVASION</div>
-                    <div class="mitre-tactic" data-tactic="Credential Access">CREDENTIAL ACCESS</div>
-                    <div class="mitre-tactic" data-tactic="Discovery">DISCOVERY</div>
-                    <div class="mitre-tactic" data-tactic="Lateral Movement">LATERAL MOVEMENT</div>
-                    <div class="mitre-tactic" data-tactic="Collection">COLLECTION</div>
-                    <div class="mitre-tactic" data-tactic="Command and Control">COMMAND & CONTROL</div>
-                    <div class="mitre-tactic" data-tactic="Exfiltration">EXFILTRATION</div>
-                    <div class="mitre-tactic" data-tactic="Impact">IMPACT</div>
-                </div>
-            </div>
+    <div id="main-content">
+        <div class="card">
+            <h2>MITRE ATT&CK Framework Mapping</h2>
+            <p class="text-muted" style="margin-bottom: 20px;">Detected threats automatically mapped to MITRE tactics and techniques.</p>
+            
+            <table id="mitre-table">
+                <thead>
+                    <tr>
+                        <th>Tactic</th>
+                        <th>Technique</th>
+                        <th>Associated Attack Type</th>
+                        <th>Detection Count</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
-
-    <script src="app.js"></script>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function loadMitre() {
+            const tbody = document.querySelector('#mitre-table tbody');
             try {
-                const res = await fetch('http://localhost:8000/api/v1/security-events?limit=50');
-                const events = await res.json();
+                const data = await window.api.getMitre();
+                if (!tbody) return;
+                tbody.innerHTML = '';
                 
-                // Collect unique active tactics
-                const activeTactics = new Set();
-                events.forEach(ev => {
-                    if(ev.mitre_tactic) activeTactics.add(ev.mitre_tactic.toLowerCase());
-                });
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No adversarial threats mapped yet. Upload a CSV or run replay to populate MITRE ATT&CK detections.</td></tr>';
+                    return;
+                }
 
-                const tactics = document.querySelectorAll('.mitre-tactic');
-                tactics.forEach(t => {
-                    const tacticName = t.getAttribute('data-tactic').toLowerCase();
-                    if (activeTactics.has(tacticName) || tacticName === 'impact' && activeTactics.has('dos')) {
-                        t.classList.add('active');
-                    }
-                    // hardcode some active stages based on the current SentinelGraph 5-class dataset (DoS, PortScan, Infiltration)
-                    if (tacticName === 'discovery' || tacticName === 'impact' || tacticName === 'lateral movement') {
-                        t.classList.add('active');
-                    }
+                data.forEach(m => {
+                    const tr = document.createElement('tr');
+                    const badgeClass = m.attack_type.toLowerCase() === 'benign' ? 'badge-benign' : `badge-${m.attack_type.toLowerCase()}`;
+                    tr.innerHTML = `
+                        <td><strong>${m.tactic || 'Unknown'}</strong></td>
+                        <td><code>${m.technique || 'Technique not mapped'}</code></td>
+                        <td><span class="badge ${badgeClass}">${m.attack_type}</span></td>
+                        <td><strong>${m.count.toLocaleString()}</strong></td>
+                        <td>${m.description || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
                 });
-            } catch (e) {
-                console.error("Error loading MITRE mapping");
+            } catch (err) {
+                console.error("Failed to load MITRE mappings:", err);
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--accent-red); padding: 20px;">Failed to load MITRE ATT&CK telemetry from backend.</td></tr>';
+                }
             }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            loadMitre();
+            setInterval(loadMitre, 10000);
         });
     </script>
 </body>

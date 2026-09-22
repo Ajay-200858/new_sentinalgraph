@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Graph - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        .graph-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 992px) {
+            .graph-wrapper { grid-template-columns: 1fr; }
+        }
+        #cy {
+            width: 100%;
+            height: 600px;
+            background-color: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+        .graph-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            align-items: center;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 10px 15px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .details-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            position: sticky;
+            top: 20px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-secondary); }
+        .detail-value { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <h3>No network data available yet.</h3>
+            <p>Upload a CSV or start a replay to begin analysis.</p>
+        </div>
+
+        <div id="graph-container">
+            <div class="legend">
+                <span style="font-weight: bold; margin-right: 5px;">Risk Legend:</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> Benign</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #f59e0b;"></span> Suspicious</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span> High Risk</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #991b1b;"></span> Critical</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6;"></span> Isolated</span>
+            </div>
+
+            <div class="graph-controls">
+                <button class="btn-primary" id="btn-top10" onclick="loadGraph(10)">Top 10</button>
+                <button class="btn-secondary" id="btn-top20" onclick="loadGraph(20)">Top 20</button>
+                <button class="btn-secondary" id="btn-top50" onclick="loadGraph(50)">Top 50</button>
+                <button class="btn-secondary" onclick="filterRiskyOnly()">Only Risky</button>
+                <button class="btn-secondary" onclick="loadGraph(100)">Show All</button>
+                <button class="btn-secondary" onclick="fitGraph()">Fit Graph</button>
+                <button class="btn-secondary" onclick="resetLayout()">Reset Layout</button>
+                <button class="btn-secondary" onclick="refreshGraph()">Refresh</button>
+            </div>
+
+            <div class="graph-wrapper">
+                <div id="cy"></div>
+
+                <div class="details-card" id="node-details-card">
+                    <h3 id="detail-title" style="margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Node Details</h3>
+                    <div id="detail-empty" style="color: var(--text-secondary); text-align: center; padding: 20px 0;">
+                        Click on any node in the graph to view detailed IP telemetry and take isolation action.
+                    </div>
+                    <div id="detail-content" style="display: none;">
+                        <div class="detail-row"><span class="detail-label">IP Address</span><span class="detail-value" id="d-ip" style="font-family: monospace;">-</span></div>
+                        <div class="detail-row"><span class="detail-label">Node Type</span><span class="detail-value" id="d-type">-</span></div>
+                        <div class="detail-row"><span class="detail-label">Connections</span><span class="detail-value" id="d-flows">0</span></div>
+                        <div class="detail-row"><span class="detail-label">Attacks Detected</span><span class="detail-value" id="d-attacks" style="color: var(--accent-red);">0</span></div>
+                        <div class="detail-row"><span class="detail-label">Attack Type</span><span class="detail-value" id="d-threat">-</span></div>
+                        <div class="detail-row"><span class="detail-label">Risk Level</span><span class="detail-value" id="d-risk">-</span></div>
+                        <div class="detail-row"><span class="detail-label">Isolation Status</span><span class="detail-value" id="d-iso">-</span></div>
+                        <div class="detail-row"><span class="detail-label">Last Seen</span><span class="detail-value" id="d-time" style="font-size: 0.8rem;">-</span></div>
+                        <div style="margin-top: 20px;">
+                            <button class="btn-primary" id="btn-toggle-isolate" style="width: 100%;" onclick="handleNodeIsolation()">Isolate Host Node</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/graph.js"></script>
+</body>
+</html>

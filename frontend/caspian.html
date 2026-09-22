@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caspian Notifications - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <style>
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-configured {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .status-unconfigured {
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+        .status-ready {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+        .status-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+        .test-feedback {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <div class="card" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <h2>Caspian Alert Engine & Notification Telemetry</h2>
+                    <p class="text-muted">Outbound SOC threat broadcast integration with Telegram, Discord, and HttpGatewayClient.</p>
+                </div>
+                <button class="btn-primary" onclick="testCaspian()" id="btn-test">Test Connection</button>
+            </div>
+
+            <!-- KPI Row for Notification Status -->
+            <div class="kpi-row">
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Caspian Status</span>
+                    <div style="margin-top: 6px;">
+                        <span id="gateway-status" class="status-badge status-unconfigured">CHECKING...</span>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Telegram Channel</span>
+                    <div style="margin-top: 6px;">
+                        <span id="telegram-status" class="status-badge status-unconfigured">CHECKING...</span>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Discord Channel</span>
+                    <div style="margin-top: 6px;">
+                        <span id="discord-status" class="status-badge status-unconfigured">CHECKING...</span>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Total Notifications</span>
+                    <h3 id="stat-total" style="margin-top: 4px;">0</h3>
+                </div>
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Sent Successfully</span>
+                    <h3 id="stat-sent" style="margin-top: 4px; color: var(--accent-green);">0</h3>
+                </div>
+                <div class="card" style="margin-bottom: 0; background: var(--bg-tertiary);">
+                    <span class="text-muted" style="font-size: 0.8rem;">Failed / Blocked</span>
+                    <h3 id="stat-failed" style="margin-top: 4px; color: var(--accent-red);">0</h3>
+                </div>
+            </div>
+
+            <div id="test-feedback-box" class="test-feedback"></div>
+
+            <div id="last-error-container" style="display: none; margin-bottom: 15px; padding: 10px 14px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--accent-red); font-size: 0.85rem; border-radius: 4px;">
+                <strong style="color: var(--accent-red);">Last Recorded Alert Error:</strong>
+                <span id="last-error-text" style="margin-left: 8px; font-family: monospace;"></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Recent SOC Alert History</h3>
+                <button class="btn-secondary" onclick="loadCaspianData()" style="padding: 6px 12px; font-size: 0.85rem;">Refresh</button>
+            </div>
+
+            <table id="notif-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Channel</th>
+                        <th>Trigger Attack</th>
+                        <th>Target Host</th>
+                        <th>Risk Score</th>
+                        <th>Status</th>
+                        <th>Delivery Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script>
+        async function loadCaspianData() {
+            try {
+                // Fetch status and metrics
+                if (window.api.getCaspianStatus) {
+                    const statusData = await window.api.getCaspianStatus();
+                    renderStatusKPIs(statusData);
+                }
+                
+                // Fetch notification list
+                const notifs = await window.api.getNotifications(50) || [];
+                renderTable(notifs);
+            } catch (err) {
+                console.error("Failed to load Caspian data:", err);
+            }
+        }
+
+        function renderStatusKPIs(data) {
+            if (!data) return;
+
+            // Gateway Status
+            const gw = document.getElementById('gateway-status');
+            if (gw) {
+                gw.textContent = data.status || 'UNKNOWN';
+                gw.className = 'status-badge ' + (data.status === 'READY' ? 'status-ready' : (data.status === 'ERROR' ? 'status-error' : 'status-unconfigured'));
+            }
+
+            // Telegram
+            const tg = document.getElementById('telegram-status');
+            if (tg) {
+                tg.textContent = data.telegram_configured ? 'Configured' : 'Not Configured';
+                tg.className = 'status-badge ' + (data.telegram_configured ? 'status-configured' : 'status-unconfigured');
+            }
+
+            // Discord
+            const dc = document.getElementById('discord-status');
+            if (dc) {
+                dc.textContent = data.discord_configured ? 'Configured' : 'Not Configured';
+                dc.className = 'status-badge ' + (data.discord_configured ? 'status-configured' : 'status-unconfigured');
+            }
+
+            // Counters
+            document.getElementById('stat-total').textContent = (data.total_notifications || 0).toLocaleString();
+            document.getElementById('stat-sent').textContent = (data.sent_count || 0).toLocaleString();
+            document.getElementById('stat-failed').textContent = (data.failed_count || 0).toLocaleString();
+
+            // Last error
+            const errBox = document.getElementById('last-error-container');
+            const errText = document.getElementById('last-error-text');
+            if (data.last_error) {
+                errBox.style.display = 'block';
+                errText.textContent = data.last_error;
+            } else {
+                errBox.style.display = 'none';
+            }
+        }
+
+        function renderTable(notifs) {
+            const tbody = document.querySelector('#notif-table tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!notifs || notifs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">No alerts generated in PostgreSQL yet.</td></tr>';
+                return;
+            }
+
+            notifs.forEach(n => {
+                const tr = document.createElement('tr');
+                const isSent = (n.status === 'SENT' || n.status === 'Success');
+                const statusColor = isSent ? 'var(--accent-green)' : 'var(--accent-red)';
+                const statusText = isSent ? 'SENT' : (n.status || 'FAILED');
+
+                tr.innerHTML = `
+                    <td style="white-space: nowrap;">${n.timestamp ? n.timestamp.replace('T', ' ').substring(0, 19) : '-'}</td>
+                    <td><strong>${(n.channel || 'caspian').toUpperCase()}</strong></td>
+                    <td><span class="badge ${n.attack_type && n.attack_type.toLowerCase() === 'benign' ? 'badge-benign' : 'badge-ddos'}">${n.attack_type || '-'}</span></td>
+                    <td style="font-family: monospace;">${n.destination_ip || n.source_ip || '-'}</td>
+                    <td><strong>${n.risk_score != null ? Math.round(n.risk_score) : 0}</strong></td>
+                    <td style="font-weight: 600; color: ${statusColor}">${statusText}</td>
+                    <td style="font-size: 0.85rem; color: ${isSent ? 'var(--text-secondary)' : 'var(--accent-red)'};">${n.error_message || (isSent ? 'Delivered to SOC' : 'Delivery skipped or failed')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function testCaspian() {
+            const btn = document.getElementById('btn-test');
+            const box = document.getElementById('test-feedback-box');
+            btn.disabled = true;
+            btn.textContent = "Testing...";
+            box.style.display = 'none';
+
+            try {
+                const res = await window.api.testCaspian();
+                box.style.display = 'block';
+                if (res.sent) {
+                    box.style.background = 'rgba(34, 197, 94, 0.15)';
+                    box.style.border = '1px solid var(--accent-green)';
+                    box.style.color = 'var(--accent-green)';
+                    box.innerHTML = `<strong>Success:</strong> ${res.detail} (Caspian Gateway: ${res.caspian_status})`;
+                } else {
+                    box.style.background = 'rgba(239, 68, 68, 0.15)';
+                    box.style.border = '1px solid var(--accent-red)';
+                    box.style.color = 'var(--accent-red)';
+                    box.innerHTML = `<strong>Alert not sent:</strong> ${res.detail} (Caspian Gateway: ${res.caspian_status})`;
+                }
+            } catch (e) {
+                box.style.display = 'block';
+                box.style.background = 'rgba(239, 68, 68, 0.15)';
+                box.style.border = '1px solid var(--accent-red)';
+                box.style.color = 'var(--accent-red)';
+                box.innerHTML = `<strong>Error:</strong> ${e.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Test Connection";
+                loadCaspianData();
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadCaspianData();
+            setInterval(loadCaspianData, 8000);
+        });
+    </script>
+</body>
+</html>

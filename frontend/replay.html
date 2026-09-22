@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Replay & Upload - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <style>
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            padding: 30px;
+            text-align: center;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            background-color: rgba(255,255,255,0.02);
+            transition: border-color 0.2s;
+        }
+        .upload-area:hover { border-color: var(--accent-blue); }
+        .file-info { margin-top: 12px; font-weight: bold; color: var(--accent-blue); }
+        .progress-bar-container {
+            width: 100%;
+            background-color: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin: 15px 0 10px 0;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-blue);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .controls { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; }
+        .status-panel {
+            background: var(--bg-secondary);
+            padding: 18px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            margin-top: 15px;
+        }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status-ready { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; }
+        .status-processing { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <div class="grid grid-cols-2">
+            
+            <!-- Upload Telemetry Section -->
+            <div class="card">
+                <h2>Upload Network Telemetry</h2>
+                <p class="text-muted" style="margin-bottom: 20px;">Upload a CSV network flow file for immediate batch ingestion or simulation replay.</p>
+                
+                <div class="upload-area">
+                    <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                    <button class="btn-secondary" onclick="document.getElementById('csvFile').click()">Select CSV File</button>
+                    <div id="file-info" class="file-info">No file selected</div>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" id="btn-upload" style="flex: 1;" disabled>Upload and Ingest</button>
+                    <button class="btn-secondary" id="btn-upload-and-replay" style="flex: 1;" disabled>Upload & Start Replay</button>
+                </div>
+                <div id="upload-status" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Simulation / Replay Section -->
+            <div class="card">
+                <h2>Network Traffic Replay Engine</h2>
+                <p class="text-muted" style="margin-bottom: 20px;">Stream packets row-by-row chronologically into ML inference & PostgreSQL.</p>
+                
+                <div class="controls">
+                    <select id="dataset-select" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); flex-grow: 1;">
+                        <option value="demo_five_class_sample.csv">demo_five_class_sample.csv</option>
+                        <option value="sentinelgraph_real_temporal_10k.csv">sentinelgraph_real_temporal_10k.csv</option>
+                    </select>
+                    
+                    <select id="speed-select" style="padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); min-width: 90px;">
+                        <option value="1.0">1x</option>
+                        <option value="10.0" selected>10x (Demo)</option>
+                        <option value="100.0">100x (Fast)</option>
+                    </select>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-primary" id="btn-start-replay" style="flex-grow: 1;">Start Replay</button>
+                    <button class="btn-secondary" id="btn-stop-replay" style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);" disabled>Stop</button>
+                </div>
+
+                <div class="status-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <span class="text-muted" style="font-size: 0.85rem; margin-right: 8px;">State:</span>
+                            <span id="replay-status-badge" class="status-badge status-ready">Ready</span>
+                        </div>
+                        <div style="font-family: monospace; font-size: 0.9rem;" id="replay-progress-text">0 / 0 rows (0%)</div>
+                    </div>
+
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="replay-progress-bar"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3" style="margin-top: 15px; gap: 10px; text-align: center;">
+                        <div style="background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius-sm);">
+                            <small class="text-muted">Current Attack</small><br>
+                            <strong id="replay-current-attack" style="color: var(--accent-blue); font-size: 1.1rem;">None</strong>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius-sm);">
+                            <small class="text-muted">Attacks Detected</small><br>
+                            <strong id="replay-attacks" style="color: var(--accent-red); font-size: 1.1rem;">0</strong>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 10px; border-radius: var(--radius-sm);">
+                            <small class="text-muted">Current Risk</small><br>
+                            <strong id="replay-risk" style="color: var(--accent-red); font-size: 1.1rem;">0/100</strong>
+                        </div>
+                    </div>
+
+                    <div id="replay-error-box" style="display: none; margin-top: 12px; padding: 10px; background: rgba(239,68,68,0.15); border: 1px solid var(--accent-red); border-radius: var(--radius-sm); color: var(--accent-red); font-size: 0.85rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script src="assets/js/replay.js"></script>
+</body>
+</html>

@@ -191,8 +191,7 @@ class ModelService:
         # ── Sort chronologically (REQUIRED by TGN) ─────────────────────────
         if _TS_COL in df.columns:
             logger.info("Sorting %d rows by %s ...", len(df), _TS_COL)
-            df[_TS_COL] = pd.to_datetime(df[_TS_COL], infer_datetime_format=True,
-                                          errors="coerce")
+            df[_TS_COL] = pd.to_datetime(df[_TS_COL], errors="coerce")
             df = df.dropna(subset=[_TS_COL])
             df = df.sort_values(_TS_COL).reset_index(drop=True)
             logger.info("Chronological sort complete.")
@@ -362,6 +361,8 @@ class ModelService:
         if not self.is_loaded:
             raise RuntimeError("Models not loaded. Call load_models() first.")
 
+        df = df.reset_index(drop=True)
+
         # ── Feature alignment with training ──────────────────────────────
         available_cols = [c for c in features_to_use if c in df.columns]
         X = df[available_cols].values.astype(np.float32)
@@ -398,8 +399,7 @@ class ModelService:
         # ── Sort by timestamp before inference (temporal ordering) ────────
         if has_ts:
             df = df.copy()
-            df[_TS_COL] = pd.to_datetime(df[_TS_COL], infer_datetime_format=True,
-                                          errors="coerce")
+            df[_TS_COL] = pd.to_datetime(df[_TS_COL], errors="coerce")
             orig_idx = df.index.tolist()
             df_sorted = df.sort_values(_TS_COL).reset_index(drop=False)
             sort_order = df_sorted["index"].tolist()
@@ -544,6 +544,18 @@ class ModelService:
     def get_mitre_tactic(self, prediction_class: str) -> str:
         return CATEGORY_TO_MITRE.get(prediction_class,
                CATEGORY_TO_MITRE.get("BENIGN", "Benign"))
+
+    def get_mitre_technique(self, prediction_class: str) -> str:
+        techniques = {
+            "DoS": "T1498 (Network Denial of Service)",
+            "DDoS": "T1498 (Network Denial of Service)",
+            "PortScan": "T1046 (Network Service Discovery)",
+            "Infiltration": "T1210 (Exploitation of Remote Services)",
+            "BruteForce": "T1110 (Brute Force)",
+            "WebAttack": "T1190 (Exploit Public-Facing Application)",
+            "Bot": "T1071 (Application Layer Protocol)",
+        }
+        return techniques.get(prediction_class, "Technique not mapped")
 
     # ------------------------------------------------------------------
     # Optional: get_forecast

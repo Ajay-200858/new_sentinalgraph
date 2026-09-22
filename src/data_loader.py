@@ -296,7 +296,7 @@ def load_and_clean(
                 continue
         else:
             # Last resort: let pandas infer the format
-            df[COL_TIMESTAMP] = pd.to_datetime(df[COL_TIMESTAMP], infer_datetime_format=True, errors="coerce")
+            df[COL_TIMESTAMP] = pd.to_datetime(df[COL_TIMESTAMP], errors="coerce")
             logger.warning("Timestamp format inferred by pandas (may be slow)")
     else:
         logger.warning(f"Column '{COL_TIMESTAMP}' not found - creating sequential timestamps")

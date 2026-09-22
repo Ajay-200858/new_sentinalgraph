@@ -4,6 +4,14 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class NetworkFlow(Base):
     __tablename__ = "network_flows"
 
@@ -80,3 +88,16 @@ class Notification(Base):
     status = Column(String) # e.g., "PENDING", "SENT", "FAILED"
     sent_at = Column(DateTime, nullable=True)
     error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class IsolatedHost(Base):
+    __tablename__ = "isolated_hosts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String, unique=True, index=True)
+    reason = Column(String, default="Manual logical isolation")
+    status = Column(String, default="ISOLATED") # "ISOLATED" or "RESTORED"
+    isolated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

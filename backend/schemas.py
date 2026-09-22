@@ -50,6 +50,8 @@ class DashboardSummary(BaseModel):
     attack_distribution: dict
     model_performance: dict
     forecast_projection: dict
+    total_predictions: Optional[int] = 0
+    active_hosts: Optional[int] = 0
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 # Data (large CSVs)
 data/raw/
 data/processed/
+data/uploads/
 
 # Model checkpoints
 models/
@@ -14,6 +15,17 @@ __pycache__/
 dist/
 build/
 .eggs/
+.pytest_cache/
+
+# Node / Web
+node_modules/
+**/node_modules/
+
+# Local backup / archive directories
+archived_frontends/
+frontend_backup_*/
+frontend-*-backup-*/
+frontend_react_backup_*/
 
 # IDE
 .vscode/
@@ -29,3 +41,4 @@ desktop.ini
 # Misc
 *.log
 .env
+

@@ -69,6 +69,24 @@ def get_status() -> str:
     return _status
 
 
+def get_channel_status() -> dict:
+    """Return channel configuration status safely without credentials."""
+    load_dotenv(_project_root / ".env", override=True)
+    api_key_set = bool(os.environ.get("CASPIAN_API_KEY", "").strip())
+    telegram_set = bool(os.environ.get("CASPIAN_TELEGRAM_CONVERSATION_ID", "").strip())
+    discord_set = bool(os.environ.get("CASPIAN_DISCORD_CONVERSATION_ID", "").strip())
+    alert_conv_set = bool(os.environ.get("CASPIAN_ALERT_CONVERSATION_ID", "").strip())
+
+    return {
+        "status": _status,
+        "api_key_configured": api_key_set,
+        "telegram_configured": telegram_set,
+        "discord_configured": discord_set,
+        "primary_destination_configured": alert_conv_set or telegram_set or discord_set,
+        "destinations_count": len(_conversation_ids),
+    }
+
+
 def initialize_caspian() -> None:
     """
     Initialise the Caspian HttpGatewayClient from environment variables.

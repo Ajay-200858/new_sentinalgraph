@@ -1,13 +1,339 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SentinelGraph - AI Security Threat Intelligence</title>
-  </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelGraph - AI SOC Command Center</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <style>
+        body { 
+            overflow-x: hidden; 
+            background-color: #030508; /* Deepest black/blue */
+            margin: 0; padding: 0;
+        }
+
+        /* -------------------------------------------
+           2. Landing 100vh Layout
+           ------------------------------------------- */
+        .landing-hero {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            overflow: hidden;
+            background: radial-gradient(circle at 70% 50%, rgba(13, 21, 37, 0.4) 0%, #030508 70%);
+        }
+
+        /* Canvas goes underneath everything in the hero */
+        #globe-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: auto; /* Allow mouse interaction for raycasting */
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            pointer-events: none; /* Let clicks pass through to canvas where empty */
+        }
+        
+        .hero-left {
+            flex: 0 0 45%;
+            padding: 0 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            pointer-events: auto; /* Enable clicks on buttons here */
+        }
+
+        .h-label {
+            display: inline-block;
+            color: var(--accent-blue);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 25px;
+            color: var(--text-primary);
+            letter-spacing: -1.5px;
+            text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+        .hero-desc {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            max-width: 90%;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 20px;
+        }
+        .hero-actions .btn-primary, .hero-actions .btn-outline {
+            padding: 16px 32px;
+            font-size: 1.15rem;
+            border-radius: var(--radius-sm);
+        }
+        .hero-actions .btn-outline {
+            background: rgba(11, 17, 28, 0.6);
+            border: 1px solid var(--border-highlight);
+            color: var(--text-primary);
+            backdrop-filter: blur(4px);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .hero-actions .btn-outline:hover {
+            border-color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Floating Telemetry Cards */
+        .hero-right {
+            flex: 1;
+            position: relative;
+            pointer-events: none;
+        }
+        .float-card {
+            position: absolute;
+            background: rgba(11, 17, 28, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            pointer-events: auto;
+            color: var(--text-primary);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8);
+            transition: transform 0.3s;
+            min-width: 200px;
+        }
+        .float-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        .fc-title {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .fc-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .fc-value.accent { color: var(--accent-blue); text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .fc-value.critical { color: var(--accent-red); text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+        
+        #fc-nodes { top: 15%; right: 10%; }
+        #fc-threats { bottom: 25%; right: 15%; }
+        #fc-health { top: 45%; left: 10%; }
+
+        /* Canvas Tooltip */
+        #canvas-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(5, 8, 15, 0.9);
+            border: 1px solid var(--accent-blue);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 20;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        /* -------------------------------------------
+           3. Features Section 
+           ------------------------------------------- */
+        .features-section {
+            background: var(--bg-primary);
+            padding: 100px 80px;
+            position: relative;
+            z-index: 20;
+            border-top: 1px solid var(--border-color);
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .f-card {
+            background: rgba(11, 17, 28, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 40px 30px;
+            border-radius: var(--radius-md);
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .f-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+        }
+        .f-icon {
+            color: var(--accent-blue);
+            margin-bottom: 25px;
+            display: inline-block;
+            padding: 15px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 50%;
+        }
+        .f-card h3 { font-size: 1.3rem; margin-bottom: 15px; color: var(--text-primary); }
+        .f-card p { font-size: 1.05rem; color: var(--text-secondary); line-height: 1.6; }
+
+        @media (max-width: 1200px) {
+            .hero-left { padding: 0 40px; flex: 0 0 50%; }
+            .hero-title { font-size: 3rem; }
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            #fc-nodes { top: 10%; right: 5%; }
+            #fc-health { top: 30%; left: 5%; }
+        }
+        @media (max-width: 900px) {
+            .hero-content { flex-direction: column; justify-content: center; }
+            .hero-left { text-align: center; align-items: center; padding: 0 20px; z-index: 20; background: rgba(3,5,8,0.7); }
+            .hero-right { display: none; }
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+            .intro-logo, .intro-scanner { animation: none !important; transition: none !important; }
+            .f-card { transition: none !important; transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Global Cinematic Background handled by global-bg.js -->
+
+    <!-- 2. Landing 100vh Layout -->
+    <div class="landing-hero">
+        <!-- Interactive 3D Canvas Handled by global-bg.js -->
+        
+        <div class="hero-content">
+            <div class="hero-left">
+                <span class="h-label">AI-POWERED NETWORK SECURITY</span>
+                <h1 class="hero-title">Forecast Threats Before They Escalate</h1>
+                <p class="hero-desc">Experience the next generation of security operations. SentinelGraph analyzes real-time network traffic, detects anomalous behavior instantly, and forecasts threat escalation pathways using advanced Temporal Graph Networks.</p>
+                <div class="hero-actions">
+                    <button class="btn-primary" onclick="location.href='login.html'">Enter SOC Dashboard</button>
+                    <button class="btn-outline" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">Explore System</button>
+                </div>
+            </div>
+            
+            <div class="hero-right">
+                <!-- Floating Telemetry Cards with Real Backend Data -->
+                <div class="float-card" id="fc-nodes">
+                    <div class="fc-title">Active Graph Nodes</div>
+                    <div class="fc-value accent" id="val-nodes">--</div>
+                </div>
+                
+                <div class="float-card" id="fc-health">
+                    <div class="fc-title">API Connection</div>
+                    <div class="fc-value" id="val-health">CHECKING</div>
+                </div>
+
+                <div class="float-card" id="fc-threats">
+                    <div class="fc-title">Active Threats</div>
+                    <div class="fc-value critical" id="val-threats">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 3. Features Section -->
+    <div class="features-section" id="features">
+        <div class="feature-grid">
+            <div class="f-card">
+                <div class="f-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                </div>
+                <h3>Real-Time Network Monitoring</h3>
+                <p>Process network flows and extract behavioral features instantaneously from PCAP and CSV streams.</p>
+            </div>
+            <div class="f-card">
+                <div class="f-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                </div>
+                <h3>Temporal Graph Intelligence</h3>
+                <p>Map complex network topologies and identify structural anomalies using state-of-the-art TGNs.</p>
+            </div>
+            <div class="f-card">
+                <div class="f-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+                <h3>Attack Forecasting</h3>
+                <p>Predict threat escalation pathways and calculate the forecast horizon for proactive defense.</p>
+            </div>
+            <div class="f-card">
+                <div class="f-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <h3>Automated Security Alerts</h3>
+                <p>Push critical high-risk alerts directly to Caspian, Telegram, and Discord SOC channels automatically.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/splash-screen.js"></script>
+    <script src="assets/js/global-bg.js"></script>
+    <script>
+        // ----------------------------------------------------
+        // Fetch Real Telemetry Logic
+        // ----------------------------------------------------
+        async function fetchRealTelemetry() {
+            try {
+                if (!window.api) return;
+                
+                // Fetch basic system status
+                const sysRes = await window.api.getSystemStatus();
+                const healthEl = document.getElementById('val-health');
+                if (sysRes.backend === "Connected") {
+                    healthEl.textContent = "ONLINE";
+                    healthEl.style.color = "var(--accent-green)";
+                    healthEl.style.textShadow = "0 0 10px rgba(16, 185, 129, 0.5)";
+                } else {
+                    healthEl.textContent = "OFFLINE";
+                    healthEl.style.color = "var(--accent-red)";
+                }
+
+                // Fetch Dashboard stats to get nodes and threats
+                const statsRes = await window.api.getSummary();
+                document.getElementById('val-nodes').textContent = statsRes.active_hosts || 0;
+                document.getElementById('val-threats').textContent = statsRes.attacks_detected || 0;
+                
+            } catch (err) {
+                console.warn("Could not fetch real telemetry:", err);
+                document.getElementById('val-health').textContent = "ERROR";
+                document.getElementById('val-health').style.color = "var(--text-muted)";
+            }
+        }
+        
+        fetchRealTelemetry();
+    </script>
+</body>
 </html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracked Hosts - SentinelGraph</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <style>
+        .notice-banner {
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 4px solid var(--accent-purple, #8b5cf6);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        .btn-isolate {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-isolate:hover { opacity: 0.9; }
+        .btn-restore {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-restore:hover { opacity: 0.9; }
+        .badge-isolated {
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            border: 1px solid #8b5cf6;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <div class="notice-banner">
+            <strong>Prototype logical isolation:</strong> Host isolation manages security enforcement status within PostgreSQL and SentinelGraph analysis pipelines.
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h2>Tracked Hosts Telemetry</h2>
+                    <p class="text-muted">Live network endpoints and logical isolation control.</p>
+                </div>
+                <button class="btn-secondary" onclick="loadHosts()">Refresh Hosts</button>
+            </div>
+
+            <div id="action-feedback" style="display: none; padding: 10px 15px; border-radius: var(--radius-sm); margin-bottom: 15px; font-weight: bold;"></div>
+            
+            <table id="hosts-table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Network Zone</th>
+                        <th>Connections</th>
+                        <th>Attacks</th>
+                        <th>Severity</th>
+                        <th>Risk Score</th>
+                        <th>Last Seen</th>
+                        <th>Status</th>
+                        <th>Isolation Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/layout.js"></script>
+    <script>
+        async function loadHosts() {
+            const tbody = document.querySelector('#hosts-table tbody');
+            try {
+                const data = await window.api.getHosts();
+                tbody.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-secondary);">No hosts tracked in PostgreSQL yet. Run a replay or upload traffic.</td></tr>';
+                    return;
+                }
+
+                data.forEach(h => {
+                    const tr = document.createElement('tr');
+                    const isIso = h.is_isolated || h.status === 'Isolated';
+                    const ip = h.ip;
+                    const maxRisk = typeof h.max_risk === 'number' ? h.max_risk.toFixed(1) : h.max_risk;
+                    const lastSeen = h.last_seen ? h.last_seen.replace('T', ' ').substring(0, 19) : '-';
+
+                    let sevColor = 'var(--text-secondary)';
+                    if (h.severity === 'CRITICAL') sevColor = 'var(--accent-red)';
+                    else if (h.severity === 'HIGH') sevColor = '#f97316';
+                    else if (h.severity === 'MEDIUM') sevColor = '#facc15';
+
+                    tr.innerHTML = `
+                        <td style="font-family: monospace; font-weight: bold;">${ip}</td>
+                        <td>${h.internal ? 'Internal' : 'External'}</td>
+                        <td>${h.flow_count || 0}</td>
+                        <td style="color: ${h.attack_count > 0 ? 'var(--accent-red)' : 'var(--text-secondary)'}; font-weight: bold;">${h.attack_count || 0}</td>
+                        <td style="color: ${sevColor}; font-weight: bold;">${h.severity || 'BENIGN'}</td>
+                        <td>${maxRisk}</td>
+                        <td style="font-size: 0.85rem;">${lastSeen}</td>
+                        <td>
+                            <span class="badge ${isIso ? 'badge-isolated' : 'badge-benign'}">
+                                ${isIso ? 'ISOLATED' : 'ACTIVE'}
+                            </span>
+                        </td>
+                        <td>
+                            ${isIso ?
+                                `<button class="btn-restore" onclick="toggleIsolation('${ip}', true)">Restore Host</button>` :
+                                `<button class="btn-isolate" onclick="toggleIsolation('${ip}', false)">Isolate (Logical)</button>`
+                            }
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Failed to load hosts:", err);
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--accent-red);">Error loading hosts: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function toggleIsolation(ip, isCurrentlyIsolated) {
+            const actionVerb = isCurrentlyIsolated ? "restore access for" : "logically isolate";
+            const confirmMsg = `Confirm ${actionVerb} host: ${ip}?\n\n(Action: Prototype logical isolation stored in PostgreSQL)`;
+            if (!confirm(confirmMsg)) return;
+
+            const feedback = document.getElementById('action-feedback');
+            try {
+                let res;
+                if (isCurrentlyIsolated) {
+                    res = await window.api.restoreHost(ip);
+                    showFeedback(`Prototype logical isolation: Host ${ip} restored to active status.`, "success");
+                } else {
+                    res = await window.api.isolateHost(ip);
+                    showFeedback(`Prototype logical isolation: Host ${ip} successfully isolated in PostgreSQL database policy.`, "warning");
+                }
+                await loadHosts();
+            } catch (err) {
+                showFeedback(`Failed to update isolation for host ${ip}: ${err.message}`, "error");
+            }
+        }
+
+        function showFeedback(msg, type) {
+            const fb = document.getElementById('action-feedback');
+            fb.textContent = msg;
+            fb.style.display = 'block';
+            if (type === 'success') {
+                fb.style.background = 'rgba(16, 185, 129, 0.15)';
+                fb.style.border = '1px solid var(--accent-green)';
+                fb.style.color = 'var(--accent-green)';
+            } else if (type === 'warning') {
+                fb.style.background = 'rgba(139, 92, 246, 0.15)';
+                fb.style.border = '1px solid #8b5cf6';
+                fb.style.color = '#c4b5fd';
+            } else {
+                fb.style.background = 'rgba(239, 68, 68, 0.15)';
+                fb.style.border = '1px solid var(--accent-red)';
+                fb.style.color = 'var(--accent-red)';
+            }
+            setTimeout(() => { fb.style.display = 'none'; }, 6000);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            try {
+                loadHosts();
+            } catch (e) {
+                console.error("Initialization error in hosts:", e);
+            }
+        });
+    </script>
+</body>
+</html>
